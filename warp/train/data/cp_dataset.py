@@ -64,8 +64,9 @@ class CPDataset(data.Dataset):
         length_a = np.linalg.norm(pose_data[5] - pose_data[2])
         length_b = np.linalg.norm(pose_data[12] - pose_data[9])
         point = (pose_data[9] + pose_data[12]) / 2
-        pose_data[9] = point + (pose_data[9] - point) / length_b * length_a
-        pose_data[12] = point + (pose_data[12] - point) / length_b * length_a
+        epsilon = 1e-6 
+        pose_data[9] = point + (pose_data[9] - point) / (length_b + epsilon) * length_a
+        pose_data[12] = point + (pose_data[12] - point) / (length_b + epsilon) * length_a
 
         r = int(length_a / 16) + 1
 
