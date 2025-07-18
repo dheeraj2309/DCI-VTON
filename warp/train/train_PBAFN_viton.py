@@ -20,7 +20,7 @@ os.makedirs(path, exist_ok=True)
 
 def CreateDataset(opt):
     from data.cp_dataset import CPDataset
-    dataset = CPDataset(opt.dataroot, mode='train', image_size=256,semantic_nc=opt.labels_nc)
+    dataset = CPDataset(opt.dataroot, mode='train', image_size=256,semantic_nc=opt.label_nc)
     # print("dataset [%s] was created" % (dataset.name()))
     # dataset.initialize(opt)
     return dataset
