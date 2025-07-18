@@ -215,7 +215,8 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
     if epoch % opt.save_epoch_freq == 0:
         if local_rank == 0:
             print('saving the model at the end of epoch %d, iters %d' % (epoch, step))
-            save_checkpoint({'state_dict': model.module.state_dict(), 'optimizer': optimizer_warp.state_dict(), 'scheduler': scheduler.state_dict(), 'epoch': epoch, 'step': step},
+            state_dict_to_save = model.module.state_dict() if hasattr(model, 'module') else model.state_dict()
+            save_checkpoint({'state_dict': state_dict_to_save, 'optimizer': optimizer_warp.state_dict(), 'scheduler': scheduler.state_dict(), 'epoch': epoch, 'step': step},
                             os.path.join(opt.checkpoint_dir, 'PBAFN_warp_epoch_%03d.pth' % epoch))
 
 
