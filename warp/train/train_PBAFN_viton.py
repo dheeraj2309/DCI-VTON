@@ -122,7 +122,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         # input1
         c_paired = data['cloth']['paired'].cuda()
         cm_paired = data['cloth_mask']['paired']
-        cm_paired = torch.FloatTensor((cm_paired.numpy() > 0.5).astype(np.float)).cuda()
+        cm_paired = torch.FloatTensor((cm_paired.numpy() > 0.5).astype(np.float32)).cuda()
         # input2
         parse_agnostic = data['parse_agnostic'].cuda()
         densepose = data['densepose'].cuda()
@@ -215,8 +215,9 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
     if epoch % opt.save_epoch_freq == 0:
         if local_rank == 0:
             print('saving the model at the end of epoch %d, iters %d' % (epoch, step))
-            save_checkpoint(model.module, optimizer_warp, epoch, step,
-                            os.path.join(opt.checkpoints_dir, opt.name, 'PBAFN_warp_epoch_%03d.pth' % epoch))
+            save_checkpoint({'state_dict': model.module.state_dict(), 'optimizer': optimizer_warp.state_dict(), 'scheduler': scheduler.state_dict(), 'epoch': epoch, 'step': step},
+                            os.path.join(opt.checkpoint_dir, 'PBAFN_warp_epoch_%03d.pth' % epoch))
+
 
     if epoch > opt.niter:
         model.module.update_learning_rate(optimizer_warp)
