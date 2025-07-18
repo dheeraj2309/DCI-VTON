@@ -223,17 +223,15 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         if local_rank == 0:
             print('saving the model at the end of epoch %d, iters %d' % (epoch, step))
             state_dict_to_save = model.module.state_dict() if hasattr(model, 'module') else model.state_dict()
+            save_path = os.path.join(opt.checkpoints_dir, opt.name, 'PBAFN_warp_epoch_%03d.pth' % epoch)
             save_checkpoint(
-                {
-                    'state_dict': state_dict_to_save,
-                    'optimizer': optimizer_warp.state_dict(),
-                    'scheduler': scheduler.state_dict(),  # <-- ADDED THIS
-                    'epoch': epoch,
-                    'step': step
-                    },
-                    os.path.join(opt.checkpoints_dir, opt.name, 'PBAFN_warp_epoch_%03d.pth' % epoch)
+                model=state_dict_to_save,  # Pass the state_dict as the first argument
+                optimizer=optimizer_warp,
+                scheduler=scheduler,
+                epoch=epoch,
+                step=step,
+                save_path=save_path
             )
-            
     scheduler.step()
     # if local_rank == 0 and epoch >= opt.niter:
     # Optional: Print the new learning rate to confirm it's working
