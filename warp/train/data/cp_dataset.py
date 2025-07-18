@@ -228,16 +228,16 @@ class CPDataset(data.Dataset):
         agnostic = transforms.Resize(self.fine_width, interpolation=2)(agnostic)
         agnostic = self.transform(agnostic)
         
-        warped_cloth_name = im_name.replace('image', 'cloth-warp')
-        warped_cloth = Image.open(osp.join(self.data_path, warped_cloth_name))
-        warped_cloth = transforms.Resize(self.fine_width, interpolation=2)(warped_cloth)
-        warped_cloth = self.transform(warped_cloth)
+        # warped_cloth_name = im_name.replace('image', 'cloth-warp')
+        # warped_cloth = Image.open(osp.join(self.data_path, warped_cloth_name))
+        # warped_cloth = transforms.Resize(self.fine_width, interpolation=2)(warped_cloth)
+        # warped_cloth = self.transform(warped_cloth)
         
-        warped_cloth_mask_name = im_name.replace('image', 'cloth-warp-mask')
-        warped_cloth_mask = Image.open(osp.join(self.data_path, warped_cloth_mask_name))
-        warped_cloth_mask = transforms.Resize(self.fine_width, interpolation=transforms.InterpolationMode.NEAREST) \
-            (warped_cloth_mask)
-        warped_cloth_mask = self.toTensor(warped_cloth_mask)
+        # warped_cloth_mask_name = im_name.replace('image', 'cloth-warp-mask')
+        # warped_cloth_mask = Image.open(osp.join(self.data_path, warped_cloth_mask_name))
+        # warped_cloth_mask = transforms.Resize(self.fine_width, interpolation=transforms.InterpolationMode.NEAREST) \
+        #     (warped_cloth_mask)
+        # warped_cloth_mask = self.toTensor(warped_cloth_mask)
 
         # to_img = transforms.ToPILImage()
         # to_img((c['paired'] + 1) / 2.0).save('cloth.jpg')
@@ -264,8 +264,8 @@ class CPDataset(data.Dataset):
             'parse_cloth': im_c,  # VGG Loss & vis
             # visualization & GT
             'image': im,  # for visualization
-            'warped_cloth': warped_cloth,
-            'warped_cloth_mask': warped_cloth_mask
+            # 'warped_cloth': warped_cloth,
+            # 'warped_cloth_mask': warped_cloth_mask
         }
 
         return result
