@@ -12,6 +12,7 @@ import random
 from tensorboardX import SummaryWriter
 import cv2
 import datetime
+from torch.optim.lr_scheduler import LambdaLR
 
 opt = TrainOptions().parse()
 path = 'runs/' + opt.name
@@ -76,6 +77,11 @@ criterionVGG = VGGLoss()
 params_warp = [p for p in model.parameters()]
 optimizer_warp = torch.optim.Adam(params_warp, lr=opt.lr, betas=(opt.beta1, 0.999))
 
+scheduler = LambdaLR(
+    optimizer_warp,
+    lr_lambda=lambda epoch: 1.0 - max(0, epoch + opt.niter - (opt.niter + opt.niter_decay)) / float(opt.niter_decay + 1)
+)
+
 total_steps = 0 
 
 if opt.continue_train:
@@ -87,6 +93,7 @@ if opt.continue_train:
         
         model.module.load_state_dict(checkpoint['state_dict'])
         optimizer_warp.load_state_dict(checkpoint['optimizer'])
+        scheduler.load_state_dict(checkpoint['scheduler'])
         
         start_epoch = checkpoint['epoch'] + 1
         total_steps = checkpoint.get('step', 0)
@@ -216,9 +223,18 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         if local_rank == 0:
             print('saving the model at the end of epoch %d, iters %d' % (epoch, step))
             state_dict_to_save = model.module.state_dict() if hasattr(model, 'module') else model.state_dict()
-            save_checkpoint({'state_dict': state_dict_to_save, 'optimizer': optimizer_warp.state_dict(), 'scheduler': scheduler.state_dict(), 'epoch': epoch, 'step': step},
-                            os.path.join(opt.checkpoint_dir, 'PBAFN_warp_epoch_%03d.pth' % epoch))
-
-
-    if epoch > opt.niter:
-        model.module.update_learning_rate(optimizer_warp)
+            save_checkpoint(
+                {
+                    'state_dict': state_dict_to_save,
+                    'optimizer': optimizer_warp.state_dict(),
+                    'scheduler': scheduler.state_dict(),  # <-- ADDED THIS
+                    'epoch': epoch,
+                    'step': step
+                    },
+                    os.path.join(opt.checkpoints_dir, opt.name, 'PBAFN_warp_epoch_%03d.pth' % epoch)
+            )
+            
+    scheduler.step()
+    # if local_rank == 0 and epoch >= opt.niter:
+    # Optional: Print the new learning rate to confirm it's working
+    # print(f"LR DECAY: Epoch {epoch+1}, New LR: {scheduler.get_last_lr()[0]}")
