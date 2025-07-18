@@ -7,7 +7,8 @@ import torch.nn.functional as F
 import os
 import numpy as np
 import torch
-from torch.utils.data import DataLoader, DistributedSampler
+from torch.utils.data import DataLoader, DistributedSampler,Subset
+import random
 from tensorboardX import SummaryWriter
 import cv2
 import datetime
@@ -19,7 +20,7 @@ os.makedirs(path, exist_ok=True)
 
 def CreateDataset(opt):
     from data.cp_dataset import CPDataset
-    dataset = CPDataset(opt.dataroot, mode='train', image_size=256)
+    dataset = CPDataset(opt.dataroot, mode='train', image_size=256,semantic_nc=opt.labels_nc)
     # print("dataset [%s] was created" % (dataset.name()))
     # dataset.initialize(opt)
     return dataset
@@ -37,7 +38,21 @@ device = torch.device(f'cuda:{local_rank}')
 
 start_epoch, epoch_iter = 1, 0
 
-train_data = CreateDataset(opt)
+train_data_full = CreateDataset(opt)
+
+if opt.subset_size > 0:
+    print(f"Using a random subset of {opt.subset_size} images with seed {opt.random_seed}.")
+    subset_size = min(opt.subset_size, len(train_data_full))
+    indices = list(range(len(train_data_full)))
+    random.seed(opt.random_seed)
+    random.shuffle(indices)
+    subset_indices = indices[:subset_size]
+    train_data = Subset(train_data_full, subset_indices)
+else:
+    print("Using the full dataset.")
+    train_data = train_data_full
+
+
 train_sampler = DistributedSampler(train_data)
 train_loader = DataLoader(train_data, batch_size=opt.batchSize, shuffle=False,
                           num_workers=4, pin_memory=True, sampler=train_sampler)
@@ -45,7 +60,7 @@ dataset_size = len(train_loader)
 print('#training images = %d' % dataset_size)
 
 warp_model = AFWM(opt, 3 + opt.label_nc)
-print(warp_model)
+# print(warp_model)
 warp_model.train()
 warp_model.cuda()
 warp_model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(warp_model).to(device)
@@ -61,8 +76,30 @@ criterionVGG = VGGLoss()
 params_warp = [p for p in model.parameters()]
 optimizer_warp = torch.optim.Adam(params_warp, lr=opt.lr, betas=(opt.beta1, 0.999))
 
-total_steps = (start_epoch - 1) * dataset_size + epoch_iter
-step = 0
+total_steps = 0 
+
+if opt.continue_train:
+    checkpoint_path = os.path.join(opt.checkpoints_dir, opt.name, f'{opt.which_epoch}.pth')
+    
+    if os.path.exists(checkpoint_path):
+        print(f"Resuming training from checkpoint: {checkpoint_path}")
+        checkpoint = torch.load(checkpoint_path, map_location=device)
+        
+        model.module.load_state_dict(checkpoint['state_dict'])
+        optimizer_warp.load_state_dict(checkpoint['optimizer'])
+        
+        start_epoch = checkpoint['epoch'] + 1
+        total_steps = checkpoint.get('step', 0)
+        epoch_iter = total_steps % dataset_size
+
+        print(f"Loaded model from epoch {checkpoint['epoch']} at step {total_steps}. Resuming from epoch {start_epoch}.")
+    else:
+        print(f"WARNING: --continue_train was specified, but checkpoint not found at {checkpoint_path}. Starting from scratch.")
+
+if total_steps == 0:
+    total_steps = (start_epoch - 1) * dataset_size + epoch_iter
+
+step = total_steps
 step_per_batch = dataset_size
 
 if local_rank == 0:
@@ -154,17 +191,17 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
                 cv2.imwrite('sample/' + opt.name + '/' + str(step) + '.jpg', bgr)
 
         step += 1
+
         iter_end_time = time.time()
         iter_delta_time = iter_end_time - iter_start_time
-        step_delta = (step_per_batch - step % step_per_batch) + step_per_batch * (opt.niter + opt.niter_decay - epoch)
+        step_delta = (step_per_batch - (step % step_per_batch)) + step_per_batch * (opt.niter + opt.niter_decay - epoch)
         eta = iter_delta_time * step_delta
         eta = str(datetime.timedelta(seconds=int(eta)))
         time_stamp = datetime.datetime.now()
         now = time_stamp.strftime('%Y.%m.%d-%H:%M:%S')
         if step % 100 == 0:
             if local_rank == 0:
-                print('{}:{}:[step-{}]--[loss-{:.6f}]--[ETA-{}]'.format(now, epoch_iter, step, loss_all, eta))
-
+                print('{}:[epoch {}][iter {}][step {}]--[loss-{:.6f}]--[ETA-{}]'.format(now, epoch, epoch_iter, step, loss_all, eta))
         if epoch_iter >= dataset_size:
             break
 
@@ -177,9 +214,9 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
     # save model for this epoch
     if epoch % opt.save_epoch_freq == 0:
         if local_rank == 0:
-            print('saving the model at the end of epoch %d, iters %d' % (epoch, total_steps))
-            save_checkpoint(model.module,
-                            os.path.join(opt.checkpoints_dir, opt.name, 'PBAFN_warp_epoch_%03d.pth' % (epoch + 1)))
+            print('saving the model at the end of epoch %d, iters %d' % (epoch, step))
+            save_checkpoint(model.module, optimizer_warp, epoch, step,
+                            os.path.join(opt.checkpoints_dir, opt.name, 'PBAFN_warp_epoch_%03d.pth' % epoch))
 
     if epoch > opt.niter:
         model.module.update_learning_rate(optimizer_warp)
