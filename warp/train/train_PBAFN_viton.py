@@ -85,13 +85,21 @@ scheduler = LambdaLR(
 total_steps = 0 
 
 if opt.continue_train:
-    checkpoint_path = os.path.join(opt.checkpoints_dir, opt.name, f'{opt.which_epoch}.pth')
+    # Use 'latest.pth' for easy resuming, or a specific epoch file
+    # If which_epoch is 'latest', use latest.pth, otherwise construct the epoch-specific path.
+    if opt.which_epoch == 'latest':
+        checkpoint_path = os.path.join(opt.checkpoints_dir, opt.name, 'latest.pth')
+    else:
+        checkpoint_path = os.path.join(opt.checkpoints_dir, opt.name, f'PBAFN_warp_epoch_{opt.which_epoch}.pth')
     
     if os.path.exists(checkpoint_path):
         print(f"Resuming training from checkpoint: {checkpoint_path}")
         checkpoint = torch.load(checkpoint_path, map_location=device)
         
-        model.module.load_state_dict(checkpoint['state_dict'])
+        # This handles both DDP and single-GPU model states
+        model_to_load = model.module if hasattr(model, 'module') else model
+        model_to_load.load_state_dict(checkpoint['state_dict'])
+        
         optimizer_warp.load_state_dict(checkpoint['optimizer'])
         scheduler.load_state_dict(checkpoint['scheduler'])
         
