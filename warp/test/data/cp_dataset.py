@@ -64,8 +64,9 @@ class CPDataset(data.Dataset):
         length_a = np.linalg.norm(pose_data[5] - pose_data[2])
         length_b = np.linalg.norm(pose_data[12] - pose_data[9])
         point = (pose_data[9] + pose_data[12]) / 2
-        pose_data[9] = point + (pose_data[9] - point) / length_b * length_a
-        pose_data[12] = point + (pose_data[12] - point) / length_b * length_a
+        epsilon = 1e-6
+        pose_data[9] = point + (pose_data[9] - point) / (length_b +epsilon) * length_a
+        pose_data[12] = point + (pose_data[12] - point) / (length_b + epsilon) * length_a
 
         r = int(length_a / 16) + 1
 
@@ -153,11 +154,11 @@ class CPDataset(data.Dataset):
 
         # parse map
         labels = {
-            0: ['background', [0, 10]],
-            1: ['hair', [1, 2]],
-            2: ['face', [4, 13]],
-            3: ['upper', [5, 6, 7]],
-            4: ['bottom', [9, 12]],
+            0: ['background', [0]],
+            1: ['hair', [2]],
+            2: ['face', [13]],
+            3: ['upper', [5, 6, 7]], # Upper-clothes, Dress, Coat, Jumpsuits
+            4: ['bottom', [9, 12]],     # Pants, Skirt
             5: ['left_arm', [14]],
             6: ['right_arm', [15]],
             7: ['left_leg', [16]],
@@ -165,7 +166,7 @@ class CPDataset(data.Dataset):
             9: ['left_shoe', [18]],
             10: ['right_shoe', [19]],
             11: ['socks', [8]],
-            12: ['noise', [3, 11]]
+            12: ['noise', [1, 3, 4, 10,11]]
         }
 
         parse_map = torch.FloatTensor(20, self.fine_height, self.fine_width).zero_()
@@ -214,7 +215,7 @@ class CPDataset(data.Dataset):
             pose_data = pose_data.reshape((-1, 3))[:, :2]
 
         # load densepose
-        densepose_name = im_name.replace('image', 'image-densepose')
+        densepose_name = im_name.replace('image', 'image-densepose').replace('.jpg','.png')
         densepose_map = Image.open(osp.join(self.data_path, densepose_name))
         densepose_map = transforms.Resize(self.fine_width, interpolation=2)(densepose_map)
         densepose_map = self.transform(densepose_map)  # [-1,1]
@@ -326,11 +327,11 @@ class CPDatasetTest(data.Dataset):
         im_parse = self.transform(im_parse.convert('RGB'))
 
         labels = {
-            0: ['background', [0, 10]],
-            1: ['hair', [1, 2]],
-            2: ['face', [4, 13]],
-            3: ['upper', [5, 6, 7]],
-            4: ['bottom', [9, 12]],
+            0: ['background', [0]],
+            1: ['hair', [2]],
+            2: ['face', [13]],
+            3: ['upper', [5, 6, 7]], # Upper-clothes, Dress, Coat, Jumpsuits
+            4: ['bottom', [9, 12]],     # Pants, Skirt
             5: ['left_arm', [14]],
             6: ['right_arm', [15]],
             7: ['left_leg', [16]],
@@ -338,7 +339,7 @@ class CPDatasetTest(data.Dataset):
             9: ['left_shoe', [18]],
             10: ['right_shoe', [19]],
             11: ['socks', [8]],
-            12: ['noise', [3, 11]]
+            12: ['noise', [1, 3, 4, 10,11]]
         }
 
         parse_map = torch.FloatTensor(20, self.fine_height, self.fine_width).zero_()
@@ -378,7 +379,7 @@ class CPDatasetTest(data.Dataset):
         pose_map = self.transform(pose_map)  # [-1,1]
 
         # load densepose
-        densepose_name = im_name.replace('image', 'image-densepose')
+        densepose_name = im_name.replace('image', 'image-densepose').replace('.jpg','.png')
         densepose_map = Image.open(osp.join(self.data_path, 'image-densepose', densepose_name))
         densepose_map = transforms.Resize(self.fine_width, interpolation=2)(densepose_map)
         densepose_map = self.transform(densepose_map)  # [-1,1]
