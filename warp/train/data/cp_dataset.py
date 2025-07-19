@@ -160,7 +160,7 @@ class CPDataset(data.Dataset):
             0: ['background', [0]],
             1: ['hair', [2]],
             2: ['face', [13]],
-            3: ['upper', [5, 6, 7, 10]], # Upper-clothes, Dress, Coat, Jumpsuits
+            3: ['upper', [5, 6, 7]], # Upper-clothes, Dress, Coat, Jumpsuits
             4: ['bottom', [9, 12]],     # Pants, Skirt
             5: ['left_arm', [14]],
             6: ['right_arm', [15]],
@@ -169,7 +169,7 @@ class CPDataset(data.Dataset):
             9: ['left_shoe', [18]],
             10: ['right_shoe', [19]],
             11: ['socks', [8]],
-            12: ['noise', [1, 3, 4, 11]] # Hat, Glove, Sunglasses, Scarf are treated as "noise"
+            12: ['noise', [1, 3, 4, 10,11]] # Hat, Glove, Sunglasses, Scarf are treated as "noise"
         }
 
 
