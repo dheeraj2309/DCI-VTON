@@ -1,0 +1,36 @@
+# -- Core ML/DL Packages --
+# IMPORTANT: For GPU support, it's highly recommended to install PyTorch first,
+# by following the official instructions for your specific CUDA version at:
+# https://pytorch.org/get-started/locally/
+# The versions below are derived from your conda file.
+torch==1.11.0
+torchvision==0.12.0
+numpy==1.19.2
+
+# -- Main Application & Diffusion Libraries --
+pytorch-lightning==1.4.2
+diffusers
+transformers==4.19.2
+omegaconf==2.1.1
+einops==0.3.0
+
+# -- Image & Computer Vision Libraries --
+opencv-python==4.1.2.30
+albumentations==0.4.3
+kornia==0.6
+imageio==2.9.0
+imageio-ffmpeg==0.4.2
+invisible-watermark
+bezier
+
+# -- Utility and Other Packages --
+pudb==2019.2
+test-tube>=0.7.5
+streamlit>=0.73.1
+torch-fidelity==0.3.0
+torchmetrics==0.6.0
+
+# -- Installs from Git Repositories --
+# This syntax installs directly from GitHub.
+taming-transformers @ git+https://github.com/CompVis/taming-transformers.git@master
+clip @ git+https://github.com/openai/CLIP.git@main
