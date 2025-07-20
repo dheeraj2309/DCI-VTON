@@ -13,7 +13,7 @@ dependencies:
     - albumentations==0.4.3
     - diffusers
     - bezier
-    - opencv-python==4.1.2.30
+    # - opencv-python==4.1.2.30
     - pudb==2019.2
     - invisible-watermark
     - imageio==2.9.0
